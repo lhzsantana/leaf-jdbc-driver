@@ -68,7 +68,7 @@ final class LeafStatement implements Statement {
         return parseJsonToResultSet(body);
       }
     } catch (IOException e) {
-      throw new SQLException("Erro de IO na chamada HTTP", e);
+      throw new SQLException("I/O error on HTTP call", e);
     }
   }
 
@@ -77,7 +77,7 @@ final class LeafStatement implements Statement {
       SqlParser parser = SqlParser.create(sql);
       SqlNode node = parser.parseStmt();
     } catch (SqlParseException e) {
-      throw new SQLException("SQL invalido: " + e.getMessage(), e);
+      throw new SQLException("Invalid SQL: " + e.getMessage(), e);
     }
   }
 
@@ -130,7 +130,7 @@ final class LeafStatement implements Statement {
 
       return buildRowSet(columns, rows);
     } catch (IOException e) {
-      throw new SQLException("Falha ao parsear JSON", e);
+      throw new SQLException("Failed to parse JSON", e);
     }
   }
 
@@ -138,7 +138,7 @@ final class LeafStatement implements Statement {
     CachedRowSet crs = RowSetProvider.newFactory().createCachedRowSet();
     RowSetMetaDataImpl md = new RowSetMetaDataImpl();
     md.setColumnCount(columns.size());
-    // Inferir tipos a partir da primeira linha nao nula por coluna
+    // Infer column types from first non-null value per column
     int[] colTypes = new int[columns.size()];
     for (int i = 0; i < columns.size(); i++) {
       colTypes[i] = inferSqlType(findFirstNonNull(rows, i));

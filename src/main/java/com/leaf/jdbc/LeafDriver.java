@@ -15,7 +15,7 @@ public final class LeafDriver implements Driver {
     try {
       DriverManager.registerDriver(new LeafDriver());
     } catch (SQLException e) {
-      throw new RuntimeException("Falha ao registrar LeafDriver", e);
+      throw new RuntimeException("Failed to register LeafDriver", e);
     }
   }
 
@@ -39,11 +39,11 @@ public final class LeafDriver implements Driver {
     DriverPropertyInfo apiPrefix =
         new DriverPropertyInfo("apiPrefix", info.getProperty("apiPrefix", ""));
     apiPrefix.required = true;
-    apiPrefix.description = "Prefixo base da API: ex. https://api.withleaf.io/api/v1";
+    apiPrefix.description = "Base API prefix, e.g. https://api.withleaf.io/api/v1";
 
     DriverPropertyInfo token = new DriverPropertyInfo("token", info.getProperty("token", ""));
     token.required = true;
-    token.description = "JWT Bearer token para autenticacao";
+    token.description = "JWT Bearer token for authentication";
 
     return new DriverPropertyInfo[] {apiPrefix, token};
   }

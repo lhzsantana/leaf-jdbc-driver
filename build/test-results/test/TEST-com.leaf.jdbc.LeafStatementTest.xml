@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.leaf.jdbc.LeafStatementTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-09-05T00:19:49.162Z" hostname="MacBook-Pro-de-Luiz.local" time="0.326">
+<testsuite name="com.leaf.jdbc.LeafStatementTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-09-05T01:32:08.556Z" hostname="MacBook-Pro-de-Luiz.local" time="0.352">
   <properties/>
-  <testcase name="testQueryColumnsRowsShape()" classname="com.leaf.jdbc.LeafStatementTest" time="0.326"/>
+  <testcase name="testQueryColumnsRowsShape()" classname="com.leaf.jdbc.LeafStatementTest" time="0.352"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.
 SLF4J(W): Defaulting to no-operation (NOP) logger implementation

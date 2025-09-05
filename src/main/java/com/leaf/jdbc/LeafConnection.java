@@ -48,7 +48,7 @@ final class LeafConnection implements Connection {
 
   @Override
   public PreparedStatement prepareStatement(String sql) throws SQLException {
-    throw new SQLFeatureNotSupportedException("PreparedStatement nao suportado");
+    throw new SQLFeatureNotSupportedException("PreparedStatement not supported");
   }
 
   @Override
@@ -320,6 +320,6 @@ final class LeafConnection implements Connection {
   }
 
   private void ensureOpen() throws SQLException {
-    if (closed) throw new SQLException("Conexao fechada");
+    if (closed) throw new SQLException("Connection is closed");
   }
 }

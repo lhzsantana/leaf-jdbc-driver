@@ -18,14 +18,14 @@ final class LeafJdbcUrl {
 
   static LeafJdbcUrl parse(String url, Properties info) throws SQLException {
     if (url == null || !url.startsWith(LeafDriver.JDBC_URL_PREFIX)) {
-      throw new SQLException("URL JDBC invalida, esperado prefixo: " + LeafDriver.JDBC_URL_PREFIX);
+      throw new SQLException("Invalid JDBC URL, expected prefix: " + LeafDriver.JDBC_URL_PREFIX);
     }
 
     String rest = url.substring(LeafDriver.JDBC_URL_PREFIX.length());
 
     Map<String, String> params = new HashMap<>();
     if (!rest.isEmpty()) {
-      // Suporta formatos:
+      // Supported formats:
       // jdbc:leaf:?apiPrefix=...&token=...
       // jdbc:leaf:apiPrefix=...;token=...
       String query = rest;
@@ -53,10 +53,10 @@ final class LeafJdbcUrl {
     String token = firstNonEmpty(info.getProperty("token"), params.get("token"));
 
     if (apiPrefix == null || apiPrefix.isBlank()) {
-      throw new SQLException("Propriedade obrigatoria 'apiPrefix' ausente");
+      throw new SQLException("Missing required property 'apiPrefix'");
     }
     if (token == null || token.isBlank()) {
-      throw new SQLException("Propriedade obrigatoria 'token' ausente");
+      throw new SQLException("Missing required property 'token'");
     }
 
     return new LeafJdbcUrl(apiPrefix, token);
