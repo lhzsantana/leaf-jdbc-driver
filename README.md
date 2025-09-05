@@ -3,20 +3,20 @@ A lightweight JDBC driver that connects Leaf Agriculture’s APIs to standard SQ
 Leaf JDBC Driver (Apache Calcite)
 =================================
 
-Driver JDBC leve para consultar a API da Leaf Agriculture.
+Lightweight JDBC driver to query Leaf Agriculture's API.
 
-Funcionalidades
-- **Validação de SQL**: validação sintática via Apache Calcite
-- **Autenticação JWT**: conexão com Bearer token
-- **Transformação JSON→Rows**: converte a resposta JSON da API em `ResultSet`
+Features
+- **SQL validation**: syntax validation via Apache Calcite
+- **JWT authentication**: Bearer token support
+- **JSON→Rows**: converts API JSON response into a JDBC `ResultSet`
 
-Instalação (Gradle)
+Install (Gradle)
 ```kotlin
 repositories { mavenCentral() }
 dependencies { implementation("com.leaf:leaf-jdbc-driver:0.1.0-SNAPSHOT") }
 ```
 
-Uso
+Usage
 ```java
 Properties props = new Properties();
 props.setProperty("apiPrefix", "https://api.withleaf.io/api/v1");
@@ -33,25 +33,32 @@ while (rs.next()) {
 }
 ```
 
-URL JDBC
-- Prefixo: `jdbc:leaf:`
-- Parâmetros via propriedades ou URL:
-  - `apiPrefix`: ex. `https://api.withleaf.io/api/v1`
-  - `token`: JWT Bearer
+JDBC URL
+- Prefix: `jdbc:leaf:`
+- Parameters via connection properties or URL:
+  - `apiPrefix`: e.g. `https://api.withleaf.io/api/v1`
+  - `token`: JWT Bearer token
 
-Formato esperado da API
+Expected API shape
 - Endpoint: `{apiPrefix}/pointlake/query?sql=<SQL>`
-- Autorização: header `Authorization: Bearer <token>`
-- Resposta JSON aceita:
-  - `{ "columns": ["col1",...], "rows": [[...], ...] }` ou
-  - `{ "data": [ {"col": value, ...}, ... ] }` ou
+- Authorization: header `Authorization: Bearer <token>`
+- Accepted JSON responses:
+  - `{ "columns": ["col1", ...], "rows": [[...], ...] }`, or
+  - `{ "data": [ {"col": value, ...}, ... ] }`, or
   - `[ {"col": value, ...}, ... ]`
 
-Limitações
-- Apenas `Statement` simples (sem `PreparedStatement`)
-- Modo read-only, forward-only
+Limitations
+- Basic `Statement` only (no `PreparedStatement`)
+- Read-only, forward-only
 
-Distribuição fácil
-- GitHub Packages (Gradle): configure `GITHUB_ACTOR`/`GITHUB_TOKEN` e use `com.leaf:leaf-jdbc-driver:<versao>`
-- Releases: faça download do JAR `*-all.jar` anexado no release (contém todas dependências)
-- JitPack: adicione repositório `https://jitpack.io` e use `com.github.Leaf-Agriculture:leaf-jdbc-driver:<tag>`
+Easy distribution
+- GitHub Packages (Gradle): set `GITHUB_ACTOR`/`GITHUB_TOKEN` and use `com.leaf:leaf-jdbc-driver:<version>`
+- Releases: download the `*-all.jar` attached to GitHub Releases (bundles all dependencies)
+- JitPack: add repository `https://jitpack.io` and use `com.github.Leaf-Agriculture:leaf-jdbc-driver:<tag>`
+
+Maven Central (OSSRH) publication
+- Required repo secrets: `OSSRH_USERNAME`, `OSSRH_PASSWORD`, `SIGNING_KEY` (armored PGP), `SIGNING_PASSWORD`.
+- Create a tag `vX.Y.Z` and push. The Release workflow will:
+  - Publish to GitHub Packages
+  - Publish to Sonatype (staging) and close+release
+  - Attach the `*-all.jar` to the GitHub Release
