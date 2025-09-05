@@ -2,6 +2,7 @@ plugins {
     `java-library`
     `maven-publish`
     id("com.diffplug.spotless") version "6.25.0"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "com.leaf"
@@ -73,5 +74,11 @@ publishing {
             }
         }
     }
+}
+
+tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+    archiveClassifier.set("all")
+    mergeServiceFiles()
+    minimize()
 }
 

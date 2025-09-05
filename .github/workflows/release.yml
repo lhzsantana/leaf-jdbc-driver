@@ -21,10 +21,16 @@ jobs:
       - name: Cache Gradle
         uses: gradle/actions/setup-gradle@v3
       - name: Build
-        run: ./gradlew clean build -x test --no-daemon -PartifactVersion=${GITHUB_REF_NAME#v}
+        run: ./gradlew clean build shadowJar -x test --no-daemon -PartifactVersion=${GITHUB_REF_NAME#v}
       - name: Publish to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: ./gradlew publish --no-daemon -PartifactVersion=${GITHUB_REF_NAME#v}
+      - name: Upload Release Asset (fat JAR)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/*-all.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

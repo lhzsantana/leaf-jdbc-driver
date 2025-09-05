@@ -50,3 +50,8 @@ Formato esperado da API
 Limitações
 - Apenas `Statement` simples (sem `PreparedStatement`)
 - Modo read-only, forward-only
+
+Distribuição fácil
+- GitHub Packages (Gradle): configure `GITHUB_ACTOR`/`GITHUB_TOKEN` e use `com.leaf:leaf-jdbc-driver:<versao>`
+- Releases: faça download do JAR `*-all.jar` anexado no release (contém todas dependências)
+- JitPack: adicione repositório `https://jitpack.io` e use `com.github.Leaf-Agriculture:leaf-jdbc-driver:<tag>`
