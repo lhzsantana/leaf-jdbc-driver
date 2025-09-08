@@ -1,5 +1,8 @@
 package com.leaf.jdbc;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -8,6 +11,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -20,6 +24,9 @@ import java.sql.Struct;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetMetaDataImpl;
+import javax.sql.rowset.RowSetProvider;
 
 final class LeafConnection implements Connection {
   private final String apiPrefix;
@@ -89,7 +96,7 @@ final class LeafConnection implements Connection {
 
   @Override
   public DatabaseMetaData getMetaData() throws SQLException {
-    throw new SQLFeatureNotSupportedException();
+    return createDatabaseMetaDataProxy();
   }
 
   @Override
@@ -321,5 +328,58 @@ final class LeafConnection implements Connection {
 
   private void ensureOpen() throws SQLException {
     if (closed) throw new SQLException("Connection is closed");
+  }
+
+  private DatabaseMetaData createDatabaseMetaDataProxy() throws SQLException {
+    ClassLoader cl = DatabaseMetaData.class.getClassLoader();
+    InvocationHandler handler =
+        new InvocationHandler() {
+          @Override
+          public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            String name = method.getName();
+            Class<?> rt = method.getReturnType();
+
+            if (name.equals("getURL")) return LeafDriver.JDBC_URL_PREFIX;
+            if (name.equals("getUserName")) return null;
+            if (name.equals("getDriverName")) return "Leaf JDBC Driver";
+            if (name.equals("getDriverVersion")) return "0.1.0";
+            if (name.equals("getDriverMajorVersion")) return 0;
+            if (name.equals("getDriverMinorVersion")) return 1;
+            if (name.equals("getDatabaseProductName")) return "Leaf API";
+            if (name.equals("getDatabaseProductVersion")) return "unknown";
+            if (name.equals("getIdentifierQuoteString")) return "\"";
+            if (name.equals("getCatalogSeparator")) return ".";
+            if (name.equals("getCatalogTerm")) return "catalog";
+            if (name.equals("getSchemaTerm")) return "schema";
+            if (name.equals("getSearchStringEscape")) return "\\";
+            if (name.equals("getDatabaseMajorVersion")) return 1;
+            if (name.equals("getDatabaseMinorVersion")) return 0;
+
+            if (name.equals("getSchemas")
+                || name.equals("getTables")
+                || name.equals("getColumns")) {
+              return emptyResultSet();
+            }
+
+            // Provide generic defaults to avoid failures in tools
+            if (rt == boolean.class) return false;
+            if (rt == int.class) return 0;
+            if (rt == long.class) return 0L;
+            if (rt == String.class) return "";
+            if (ResultSet.class.isAssignableFrom(rt)) return emptyResultSet();
+            return null;
+          }
+        };
+    return (DatabaseMetaData)
+        Proxy.newProxyInstance(cl, new Class<?>[] {DatabaseMetaData.class}, handler);
+  }
+
+  private ResultSet emptyResultSet() throws SQLException {
+    CachedRowSet crs = RowSetProvider.newFactory().createCachedRowSet();
+    RowSetMetaDataImpl md = new RowSetMetaDataImpl();
+    md.setColumnCount(0);
+    crs.setMetaData(md);
+    crs.beforeFirst();
+    return crs;
   }
 }
