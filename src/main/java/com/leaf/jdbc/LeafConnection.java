@@ -355,10 +355,23 @@ final class LeafConnection implements Connection {
             if (name.equals("getDatabaseMajorVersion")) return 1;
             if (name.equals("getDatabaseMinorVersion")) return 0;
 
-            if (name.equals("getSchemas")
-                || name.equals("getTables")
-                || name.equals("getColumns")) {
-              return emptyResultSet();
+            if (name.equals("getSchemas")) {
+              return emptyResultSetWithColumns("TABLE_SCHEM", "TABLE_CATALOG");
+            }
+            if (name.equals("getTables")) {
+              return emptyResultSetWithColumns(
+                  "TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS");
+            }
+            if (name.equals("getColumns")) {
+              return emptyResultSetWithColumns(
+                  "TABLE_CAT",
+                  "TABLE_SCHEM",
+                  "TABLE_NAME",
+                  "COLUMN_NAME",
+                  "DATA_TYPE",
+                  "TYPE_NAME",
+                  "COLUMN_SIZE",
+                  "NULLABLE");
             }
 
             // Provide generic defaults to avoid failures in tools
@@ -366,7 +379,7 @@ final class LeafConnection implements Connection {
             if (rt == int.class) return 0;
             if (rt == long.class) return 0L;
             if (rt == String.class) return "";
-            if (ResultSet.class.isAssignableFrom(rt)) return emptyResultSet();
+            if (ResultSet.class.isAssignableFrom(rt)) return emptyResultSetWithColumns("COLUMN");
             return null;
           }
         };
@@ -374,12 +387,23 @@ final class LeafConnection implements Connection {
         Proxy.newProxyInstance(cl, new Class<?>[] {DatabaseMetaData.class}, handler);
   }
 
-  private ResultSet emptyResultSet() throws SQLException {
+  private ResultSet emptyResultSetWithColumns(String... columnNames) throws SQLException {
     CachedRowSet crs = RowSetProvider.newFactory().createCachedRowSet();
     RowSetMetaDataImpl md = new RowSetMetaDataImpl();
-    md.setColumnCount(0);
+    md.setColumnCount(columnNames.length);
+    for (int i = 0; i < columnNames.length; i++) {
+      md.setColumnName(i + 1, columnNames[i]);
+      md.setColumnType(i + 1, java.sql.Types.VARCHAR);
+      md.setNullable(i + 1, java.sql.ResultSetMetaData.columnNullable);
+    }
     crs.setMetaData(md);
     crs.beforeFirst();
     return crs;
+  }
+
+  // Backward-compat: some paths may call this zero-column helper; ensure it returns 1+ columns
+  @SuppressWarnings("unused")
+  private ResultSet emptyResultSet() throws SQLException {
+    return emptyResultSetWithColumns("COLUMN");
   }
 }

@@ -145,8 +145,16 @@ final class LeafStatement implements Statement {
       columns = new ArrayList<>();
       columns.add("result");
     }
-    if (rows == null) {
+    // Sinalização: se não houver linhas, crie uma linha fixa para diagnosticar carregamento do
+    // driver
+    if (rows == null || rows.isEmpty()) {
       rows = new ArrayList<>();
+      List<Object> ping = new ArrayList<>();
+      // garante uma coluna
+      columns.clear();
+      columns.add("__ping");
+      ping.add("ok-" + System.currentTimeMillis());
+      rows.add(ping);
     }
     md.setColumnCount(columns.size());
     // Infer column types from first non-null value per column
