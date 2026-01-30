@@ -27,8 +27,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
 
 final class LeafStatement implements Statement {
   private final LeafConnection connection;
@@ -50,14 +48,8 @@ final class LeafStatement implements Statement {
   @Override
   public ResultSet executeQuery(String sql) throws SQLException {
     ensureOpen();
-    // Optional validation: Apache Calcite may not support all Spark SQL syntaxes
-    // The API will perform final validation anyway
-    try {
-      validateSql(sql);
-    } catch (SQLException e) {
-      // Ignore Calcite validation errors to allow Spark SQL-specific syntaxes
-      // The Leaf API will validate the SQL anyway
-    }
+    // Skip Calcite validation - it doesn't support all Spark SQL syntaxes
+    // The Leaf API will perform final validation anyway
 
     try {
       // Use system property for testing, otherwise use production endpoint
@@ -94,15 +86,6 @@ final class LeafStatement implements Statement {
       }
     } catch (IOException e) {
       throw new SQLException("I/O error on HTTP call", e);
-    }
-  }
-
-  private void validateSql(String sql) throws SQLException {
-    try {
-      SqlParser parser = SqlParser.create(sql);
-      parser.parseStmt();
-    } catch (SqlParseException e) {
-      throw new SQLException("Invalid SQL: " + e.getMessage(), e);
     }
   }
 
