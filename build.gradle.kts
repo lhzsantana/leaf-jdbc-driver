@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.leaf"
-version = (findProperty("artifactVersion") as String?) ?: "0.1.0-SNAPSHOT"
+version = (findProperty("artifactVersion") as String?) ?: "0.2.0"
 
 java {
     toolchain {
@@ -59,7 +59,7 @@ publishing {
             from(components["java"])
             pom {
                 name.set("Leaf JDBC Driver")
-                description.set("JDBC driver para Leaf Agriculture usando Apache Calcite")
+                description.set("JDBC driver for Leaf Agriculture using Apache Calcite")
             }
         }
     }

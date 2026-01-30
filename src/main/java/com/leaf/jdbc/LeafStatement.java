@@ -21,10 +21,11 @@ import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.RowSetMetaDataImpl;
 import javax.sql.rowset.RowSetProvider;
 import okhttp3.HttpUrl;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
-import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 
@@ -43,18 +44,30 @@ final class LeafStatement implements Statement {
   @Override
   public ResultSet executeQuery(String sql) throws SQLException {
     ensureOpen();
-    validateSql(sql);
+    // Optional validation: Apache Calcite may not support all Spark SQL syntaxes
+    // The API will perform final validation anyway
+    try {
+      validateSql(sql);
+    } catch (SQLException e) {
+      // Ignore Calcite validation errors to allow Spark SQL-specific syntaxes
+      // The Leaf API will validate the SQL anyway
+    }
 
     try {
       HttpUrl base =
-          Objects.requireNonNull(HttpUrl.parse(connection.apiPrefix() + "/pointlake/query"));
-      HttpUrl url = base.newBuilder().addQueryParameter("sql", sql).build();
+          Objects.requireNonNull(
+              HttpUrl.parse(connection.apiPrefix() + "/services/pointlake/api/v2/query"));
+      HttpUrl url = base.newBuilder().addQueryParameter("sqlEngine", "SPARK_SQL").build();
+
+      MediaType mediaType = MediaType.parse("text/plain; charset=utf-8");
+      RequestBody body = RequestBody.create(sql, mediaType);
 
       Request request =
           new Request.Builder()
               .url(url)
               .addHeader("Authorization", "Bearer " + connection.token())
-              .get()
+              .addHeader("Content-Type", "text/plain; charset=utf-8")
+              .post(body)
               .build();
 
       try (Response response = client.newCall(request).execute()) {
@@ -65,8 +78,8 @@ final class LeafStatement implements Statement {
                   + ": "
                   + (response.body() != null ? response.body().string() : ""));
         }
-        String body = response.body() != null ? response.body().string() : "";
-        ResultSet rs = parseJsonToResultSet(body);
+        String responseBody = response.body() != null ? response.body().string() : "";
+        ResultSet rs = parseJsonToResultSet(responseBody);
         this.lastResultSet = rs;
         return rs;
       }
@@ -78,7 +91,7 @@ final class LeafStatement implements Statement {
   private void validateSql(String sql) throws SQLException {
     try {
       SqlParser parser = SqlParser.create(sql);
-      SqlNode node = parser.parseStmt();
+      parser.parseStmt();
     } catch (SqlParseException e) {
       throw new SQLException("Invalid SQL: " + e.getMessage(), e);
     }
@@ -140,7 +153,7 @@ final class LeafStatement implements Statement {
   private ResultSet buildRowSet(List<String> columns, List<List<Object>> rows) throws SQLException {
     CachedRowSet crs = RowSetProvider.newFactory().createCachedRowSet();
     RowSetMetaDataImpl md = new RowSetMetaDataImpl();
-    // Fallback: DBeaver não aceita ResultSet sem colunas. Se vazio, crie uma coluna genérica.
+    // Fallback: DBeaver doesn't accept ResultSet without columns. If empty, create a generic column.
     if (columns == null || columns.isEmpty()) {
       columns = new ArrayList<>();
       columns.add("result");
@@ -406,6 +419,6 @@ final class LeafStatement implements Statement {
   }
 
   private void ensureOpen() throws SQLException {
-    if (closed) throw new SQLException("Statement fechado");
+    if (closed) throw new SQLException("Statement is closed");
   }
 }
