@@ -36,16 +36,27 @@ public final class LeafDriver implements Driver {
 
   @Override
   public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) {
-    DriverPropertyInfo apiPrefix =
-        new DriverPropertyInfo("apiPrefix", info.getProperty("apiPrefix", ""));
-    apiPrefix.required = true;
-    apiPrefix.description = "Base API prefix, e.g. https://api.withleaf.io/api/v1";
+    DriverPropertyInfo user =
+        new DriverPropertyInfo(
+            "user", firstNonEmpty(info.getProperty("user"), info.getProperty("username"), ""));
+    user.required = true;
+    user.description = "Leaf API username";
 
-    DriverPropertyInfo token = new DriverPropertyInfo("token", info.getProperty("token", ""));
-    token.required = true;
-    token.description = "JWT Bearer token for authentication";
+    DriverPropertyInfo password =
+        new DriverPropertyInfo("password", info.getProperty("password", ""));
+    password.required = true;
+    password.description = "Leaf API password";
 
-    return new DriverPropertyInfo[] {apiPrefix, token};
+    return new DriverPropertyInfo[] {user, password};
+  }
+
+  private static String firstNonEmpty(String... values) {
+    for (String value : values) {
+      if (value != null && !value.isEmpty()) {
+        return value;
+      }
+    }
+    return "";
   }
 
   @Override
@@ -55,7 +66,7 @@ public final class LeafDriver implements Driver {
 
   @Override
   public int getMinorVersion() {
-    return 2;
+    return 3;
   }
 
   @Override

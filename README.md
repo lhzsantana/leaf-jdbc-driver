@@ -4,8 +4,8 @@ A lightweight JDBC driver for querying the Leaf Agriculture API using standard S
 
 ## Features
 
+- **Automatic Authentication**: Login with username and password - no need to manage tokens
 - **SQL Validation**: Syntactic validation via Apache Calcite
-- **JWT Authentication**: Connection with Bearer token
 - **JSON→Rows Transformation**: Converts API JSON responses into `ResultSet`
 
 ## Quick Start
@@ -18,7 +18,7 @@ repositories {
     mavenCentral() 
 }
 dependencies { 
-    implementation("com.leaf:leaf-jdbc-driver:0.2.0") 
+    implementation("com.leaf:leaf-jdbc-driver:0.2.2") 
 }
 ```
 
@@ -27,13 +27,13 @@ dependencies {
 <dependency>
     <groupId>com.leaf</groupId>
     <artifactId>leaf-jdbc-driver</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.2</version>
 </dependency>
 ```
 
 ### Step 2: Configure Connection
 
-Create a connection using JDBC URL and properties:
+Create a connection using JDBC URL and credentials:
 
 ```java
 import java.sql.*;
@@ -41,10 +41,10 @@ import java.util.Properties;
 
 // Set connection properties
 Properties props = new Properties();
-props.setProperty("apiPrefix", "https://api.withleaf.io/api/v1");
-props.setProperty("token", "YOUR_JWT_TOKEN_HERE");
+props.setProperty("user", "your-username");
+props.setProperty("password", "your-password");
 
-// Create connection
+// Create connection (authentication happens automatically)
 Connection conn = DriverManager.getConnection("jdbc:leaf:", props);
 ```
 
@@ -79,12 +79,12 @@ import java.util.Properties;
 
 public class LeafExample {
     public static void main(String[] args) throws SQLException {
-        // 1. Configure connection
+        // 1. Configure connection with username and password
         Properties props = new Properties();
-        props.setProperty("apiPrefix", "https://api.withleaf.io/api/v1");
-        props.setProperty("token", "your-jwt-token-here");
+        props.setProperty("user", "your-username");
+        props.setProperty("password", "your-password");
         
-        // 2. Connect
+        // 2. Connect (authentication happens automatically)
         try (Connection conn = DriverManager.getConnection("jdbc:leaf:", props);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(
@@ -105,42 +105,87 @@ public class LeafExample {
 **Prefix:** `jdbc:leaf:`
 
 **Connection Properties:**
-- `apiPrefix` (required): Base API URL, e.g., `https://api.withleaf.io/api/v1`
-- `token` (required): JWT Bearer token for authentication
+- `user` or `username` (required): Your Leaf API username
+- `password` (required): Your Leaf API password
 
 **URL Examples:**
 ```java
 // Using Properties (recommended)
 Properties props = new Properties();
-props.setProperty("apiPrefix", "https://api.withleaf.io/api/v1");
-props.setProperty("token", "your-token");
+props.setProperty("user", "your-username");
+props.setProperty("password", "your-password");
 Connection conn = DriverManager.getConnection("jdbc:leaf:", props);
 
 // Using URL query parameters
 Connection conn = DriverManager.getConnection(
-    "jdbc:leaf:?apiPrefix=https://api.withleaf.io/api/v1&token=your-token"
+    "jdbc:leaf:?user=your-username&password=your-password"
 );
 
 // Using URL semicolon format
 Connection conn = DriverManager.getConnection(
-    "jdbc:leaf:apiPrefix=https://api.withleaf.io/api/v1;token=your-token"
+    "jdbc:leaf:user=your-username;password=your-password"
 );
 ```
 
+## Authentication
+
+The driver automatically authenticates with the Leaf API using your username and password. No need to manage tokens manually!
+
+- **Endpoint**: `https://api.withleaf.io/api/authenticate`
+- **Method**: `POST`
+- **Token Duration**: 30 days (with `rememberMe: true`)
+
+The authentication happens automatically when you create a connection. The driver handles token management internally.
+
 ## API Format
 
-**Endpoint:** `{apiPrefix}/services/pointlake/api/v2/query?sqlEngine=SPARK_SQL`
+**Endpoint:** `https://api.withleaf.io/api/v1/services/pointlake/api/v2/query?sqlEngine=SPARK_SQL`
 
 **Method:** `POST`
 
 **Request:**
 - Body: SQL query as plain text (Content-Type: `text/plain; charset=utf-8`)
-- Authorization: Header `Authorization: Bearer <token>`
+- Authorization: Header `Authorization: Bearer <token>` (automatically added)
 
 **Response Formats Supported:**
 - `[ {"col": value, ...}, ... ]` (direct array of objects) - **Primary format**
 - `{ "data": [ {"col": value, ...}, ... ] }` (wrapped array)
 - `{ "columns": ["col1",...], "rows": [[...], ...] }` (legacy format)
+
+## Using with DBeaver
+
+The driver is fully compatible with DBeaver! Here's a quick setup guide:
+
+### Quick Setup
+
+1. **Download the driver**: Get `leaf-jdbc-driver-*-all.jar` from [releases](https://github.com/lhzsantana/leaf-jdbc-driver/releases)
+
+2. **Install driver in DBeaver**:
+   - Go to **Database** → **Driver Manager** → **New**
+   - **Driver Name**: `Leaf JDBC Driver`
+   - **Driver Type**: `Generic`
+   - **Class Name**: `com.leaf.jdbc.LeafDriver`
+   - **URL Template**: `jdbc:leaf:`
+   - **Libraries**: Add the downloaded `*-all.jar` file
+   - Click **OK**
+
+3. **Create connection**:
+   - Go to **Database** → **New Database Connection**
+   - Select **Leaf JDBC Driver**
+   - **JDBC URL**: `jdbc:leaf:`
+   - **Username**: Your Leaf API username
+   - **Password**: Your Leaf API password
+   - Click **Test Connection** (driver authenticates automatically)
+   - Click **Finish**
+
+4. **Execute queries**:
+   ```sql
+   SELECT geometry FROM leaf.pointlake.points TABLESAMPLE(0.3 PERCENT) LIMIT 10
+   ```
+
+📖 **Detailed DBeaver setup guide**: See [DBEAVER_SETUP.md](DBEAVER_SETUP.md) for step-by-step instructions with screenshots and troubleshooting.
+
+**Note**: The driver automatically handles authentication when you enter username/password in DBeaver's connection dialog. No need to manage tokens manually!
 
 ## Limitations
 
@@ -156,7 +201,7 @@ Connection conn = DriverManager.getConnection(
 ```kotlin
 repositories {
     maven {
-        url = uri("https://maven.pkg.github.com/OWNER/REPO")
+        url = uri("https://maven.pkg.github.com/lhzsantana/leaf-jdbc-driver")
         credentials {
             username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
             password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")

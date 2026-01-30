@@ -1,5 +1,8 @@
 package com.leaf.jdbc;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -21,26 +24,74 @@ import java.sql.Savepoint;
 import java.sql.ShardingKey;
 import java.sql.Statement;
 import java.sql.Struct;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.RowSetMetaDataImpl;
 import javax.sql.rowset.RowSetProvider;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 final class LeafConnection implements Connection {
-  private final String apiPrefix;
+  private static final String API_BASE =
+      System.getProperty("leaf.api.base", "https://api.withleaf.io");
   private final String token;
   private boolean closed = false;
   private boolean autoCommit = true;
 
-  LeafConnection(LeafJdbcUrl parsed) {
-    this.apiPrefix = parsed.apiPrefix();
-    this.token = parsed.token();
+  LeafConnection(LeafJdbcUrl parsed) throws SQLException {
+    this.token = authenticate(parsed.username(), parsed.password());
+  }
+
+  private String authenticate(String username, String password) throws SQLException {
+    try {
+      OkHttpClient client = new OkHttpClient();
+      ObjectMapper mapper = new ObjectMapper();
+
+      Map<String, String> authData = new HashMap<>();
+      authData.put("username", username);
+      authData.put("password", password);
+      authData.put("rememberMe", "true");
+
+      String jsonBody = mapper.writeValueAsString(authData);
+
+      MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+      RequestBody body = RequestBody.create(jsonBody, mediaType);
+
+      Request request =
+          new Request.Builder()
+              .url(API_BASE + "/api/authenticate")
+              .addHeader("Content-Type", "application/json")
+              .post(body)
+              .build();
+
+      try (Response response = client.newCall(request).execute()) {
+        if (!response.isSuccessful()) {
+          throw new SQLException(
+              "Authentication failed: HTTP "
+                  + response.code()
+                  + ": "
+                  + (response.body() != null ? response.body().string() : ""));
+        }
+        String responseBody = response.body() != null ? response.body().string() : "";
+        JsonNode root = mapper.readTree(responseBody);
+        if (root.has("id_token")) {
+          return root.get("id_token").asText();
+        }
+        throw new SQLException("Invalid authentication response: missing id_token");
+      }
+    } catch (IOException e) {
+      throw new SQLException("Failed to authenticate with Leaf API", e);
+    }
   }
 
   String apiPrefix() {
-    return apiPrefix;
+    return API_BASE + "/api/v1";
   }
 
   String token() {
@@ -342,9 +393,9 @@ final class LeafConnection implements Connection {
             if (name.equals("getURL")) return LeafDriver.JDBC_URL_PREFIX;
             if (name.equals("getUserName")) return null;
             if (name.equals("getDriverName")) return "Leaf JDBC Driver";
-            if (name.equals("getDriverVersion")) return "0.2.0";
+            if (name.equals("getDriverVersion")) return "0.3.0";
             if (name.equals("getDriverMajorVersion")) return 0;
-            if (name.equals("getDriverMinorVersion")) return 2;
+            if (name.equals("getDriverMinorVersion")) return 3;
             if (name.equals("getDatabaseProductName")) return "Leaf API";
             if (name.equals("getDatabaseProductVersion")) return "unknown";
             if (name.equals("getIdentifierQuoteString")) return "\"";

@@ -8,12 +8,12 @@ import java.util.Map;
 import java.util.Properties;
 
 final class LeafJdbcUrl {
-  private final String apiPrefix;
-  private final String token;
+  private final String username;
+  private final String password;
 
-  private LeafJdbcUrl(String apiPrefix, String token) {
-    this.apiPrefix = apiPrefix;
-    this.token = token;
+  private LeafJdbcUrl(String username, String password) {
+    this.username = username;
+    this.password = password;
   }
 
   static LeafJdbcUrl parse(String url, Properties info) throws SQLException {
@@ -26,8 +26,8 @@ final class LeafJdbcUrl {
     Map<String, String> params = new HashMap<>();
     if (!rest.isEmpty()) {
       // Supported formats:
-      // jdbc:leaf:?apiPrefix=...&token=...
-      // jdbc:leaf:apiPrefix=...;token=...
+      // jdbc:leaf:?user=...&password=...
+      // jdbc:leaf:user=...;password=...
       String query = rest;
       if (rest.startsWith("?")) {
         query = rest.substring(1);
@@ -49,17 +49,26 @@ final class LeafJdbcUrl {
       }
     }
 
-    String apiPrefix = firstNonEmpty(info.getProperty("apiPrefix"), params.get("apiPrefix"));
-    String token = firstNonEmpty(info.getProperty("token"), params.get("token"));
+    // Support both 'user'/'username' and 'password'
+    String username =
+        firstNonEmpty(
+            info.getProperty("user"),
+            firstNonEmpty(
+                info.getProperty("username"),
+                firstNonEmpty(params.get("user"), params.get("username"))));
+    String password =
+        firstNonEmpty(
+            info.getProperty("password"),
+            firstNonEmpty(params.get("password"), params.get("pass")));
 
-    if (apiPrefix == null || apiPrefix.isBlank()) {
-      throw new SQLException("Missing required property 'apiPrefix'");
+    if (username == null || username.isBlank()) {
+      throw new SQLException("Missing required property 'user' or 'username'");
     }
-    if (token == null || token.isBlank()) {
-      throw new SQLException("Missing required property 'token'");
+    if (password == null || password.isBlank()) {
+      throw new SQLException("Missing required property 'password'");
     }
 
-    return new LeafJdbcUrl(apiPrefix, token);
+    return new LeafJdbcUrl(username, password);
   }
 
   private static String firstNonEmpty(String a, String b) {
@@ -68,11 +77,11 @@ final class LeafJdbcUrl {
     return null;
   }
 
-  String apiPrefix() {
-    return apiPrefix;
+  String username() {
+    return username;
   }
 
-  String token() {
-    return token;
+  String password() {
+    return password;
   }
 }

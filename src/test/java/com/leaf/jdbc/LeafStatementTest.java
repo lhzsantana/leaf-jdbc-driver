@@ -26,14 +26,36 @@ public class LeafStatementTest {
   @BeforeEach
   void setup() throws Exception {
     server = HttpServer.create(new InetSocketAddress(0), 0);
-    server.createContext("/api/services/pointlake/api/v2/query", this::handleQuery);
+    // Mock authentication endpoint
+    server.createContext("/api/authenticate", this::handleAuthenticate);
+    // Mock query endpoint
+    server.createContext("/api/v1/services/pointlake/api/v2/query", this::handleQuery);
     server.start();
-    apiPrefix = "http://localhost:" + server.getAddress().getPort() + "/api";
+    apiPrefix = "http://localhost:" + server.getAddress().getPort();
+    // Set system property to use mock server
+    System.setProperty("leaf.api.base", apiPrefix);
   }
 
   @AfterEach
   void teardown() {
+    System.clearProperty("leaf.api.base");
     server.stop(0);
+  }
+
+  private void handleAuthenticate(HttpExchange exchange) throws java.io.IOException {
+    if (!"POST".equals(exchange.getRequestMethod())) {
+      exchange.sendResponseHeaders(405, -1);
+      return;
+    }
+
+    // Return a mock token (always succeed for testing)
+    String json = "{\"id_token\":\"mock-token-12345\"}";
+    byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+    exchange.getResponseHeaders().add("Content-Type", "application/json");
+    exchange.sendResponseHeaders(200, bytes.length);
+    try (OutputStream os = exchange.getResponseBody()) {
+      os.write(bytes);
+    }
   }
 
   private void handleQuery(HttpExchange exchange) throws java.io.IOException {
@@ -43,18 +65,30 @@ public class LeafStatementTest {
       return;
     }
 
-    // Read SQL from request body
-    try (BufferedReader reader =
-        new BufferedReader(
-            new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
-      reader.lines().collect(Collectors.joining("\n"));
-    }
-
     // Verify sqlEngine query parameter
     String query = exchange.getRequestURI().getQuery();
     if (query == null || !query.contains("sqlEngine=SPARK_SQL")) {
       exchange.sendResponseHeaders(400, -1);
       return;
+    }
+
+    // Verify Authorization header (Bearer token) - accept any Bearer token for testing
+    java.util.List<String> authHeaders = exchange.getRequestHeaders().get("Authorization");
+    if (authHeaders == null || authHeaders.isEmpty()) {
+      exchange.sendResponseHeaders(401, -1);
+      return;
+    }
+    String authHeader = authHeaders.get(0);
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      exchange.sendResponseHeaders(401, -1);
+      return;
+    }
+
+    // Read SQL from request body (after verifying headers)
+    try (BufferedReader reader =
+        new BufferedReader(
+            new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
+      reader.lines().collect(Collectors.joining("\n"));
     }
 
     // Return direct array of JSON objects (new format)
@@ -78,8 +112,8 @@ public class LeafStatementTest {
   @Test
   void testQueryArrayFormat() throws Exception {
     Properties p = new Properties();
-    p.setProperty("apiPrefix", apiPrefix);
-    p.setProperty("token", "dummy");
+    p.setProperty("user", "testuser");
+    p.setProperty("password", "testpass");
 
     try (Connection c = DriverManager.getConnection("jdbc:leaf:", p);
         Statement s = c.createStatement();
