@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.RowSetMetaDataImpl;
 import javax.sql.rowset.RowSetProvider;
@@ -31,7 +32,12 @@ import org.apache.calcite.sql.parser.SqlParser;
 
 final class LeafStatement implements Statement {
   private final LeafConnection connection;
-  private final OkHttpClient client = new OkHttpClient();
+  private final OkHttpClient client =
+      new OkHttpClient.Builder()
+          .connectTimeout(30, TimeUnit.MINUTES)
+          .readTimeout(30, TimeUnit.MINUTES)
+          .writeTimeout(30, TimeUnit.MINUTES)
+          .build();
   private final ObjectMapper mapper = new ObjectMapper();
   private boolean closed = false;
   private int fetchSize = 0;

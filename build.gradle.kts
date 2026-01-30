@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.leaf"
-version = (findProperty("artifactVersion") as String?) ?: "0.3.6"
+version = (findProperty("artifactVersion") as String?) ?: "0.3.7"
 
 java {
     toolchain {

@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.RowSetMetaDataImpl;
 import javax.sql.rowset.RowSetProvider;
@@ -50,7 +51,12 @@ final class LeafConnection implements Connection {
 
   private String authenticate(String username, String password) throws SQLException {
     try {
-      OkHttpClient client = new OkHttpClient();
+      OkHttpClient client =
+          new OkHttpClient.Builder()
+              .connectTimeout(30, TimeUnit.MINUTES)
+              .readTimeout(30, TimeUnit.MINUTES)
+              .writeTimeout(30, TimeUnit.MINUTES)
+              .build();
       ObjectMapper mapper = new ObjectMapper();
 
       Map<String, String> authData = new HashMap<>();
@@ -393,7 +399,7 @@ final class LeafConnection implements Connection {
             if (name.equals("getURL")) return LeafDriver.JDBC_URL_PREFIX;
             if (name.equals("getUserName")) return null;
             if (name.equals("getDriverName")) return "Leaf JDBC Driver";
-            if (name.equals("getDriverVersion")) return "0.3.6";
+            if (name.equals("getDriverVersion")) return "0.3.7";
             if (name.equals("getDriverMajorVersion")) return 0;
             if (name.equals("getDriverMinorVersion")) return 3;
             if (name.equals("getDatabaseProductName")) return "Leaf API";
