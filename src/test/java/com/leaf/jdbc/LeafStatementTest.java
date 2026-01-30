@@ -84,8 +84,7 @@ public class LeafStatementTest {
     try (Connection c = DriverManager.getConnection("jdbc:leaf:", p);
         Statement s = c.createStatement();
         ResultSet rs =
-            s.executeQuery(
-                "SELECT geometry FROM leaf.pointlake.points TABLESAMPLE(0.3 PERCENT)")) {
+            s.executeQuery("SELECT geometry FROM leaf.pointlake.points TABLESAMPLE(0.3 PERCENT)")) {
       assertNotNull(rs);
       assertTrue(rs.next());
       assertEquals("POINT (15.754155568620842 50.31069667390199)", rs.getString("geometry"));

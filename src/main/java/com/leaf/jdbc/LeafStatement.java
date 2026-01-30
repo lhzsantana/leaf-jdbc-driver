@@ -153,7 +153,8 @@ final class LeafStatement implements Statement {
   private ResultSet buildRowSet(List<String> columns, List<List<Object>> rows) throws SQLException {
     CachedRowSet crs = RowSetProvider.newFactory().createCachedRowSet();
     RowSetMetaDataImpl md = new RowSetMetaDataImpl();
-    // Fallback: DBeaver doesn't accept ResultSet without columns. If empty, create a generic column.
+    // Fallback: DBeaver doesn't accept ResultSet without columns. If empty, create a generic
+    // column.
     if (columns == null || columns.isEmpty()) {
       columns = new ArrayList<>();
       columns.add("result");
