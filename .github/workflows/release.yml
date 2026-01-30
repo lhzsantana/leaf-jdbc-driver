@@ -43,12 +43,28 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: ./gradlew clean build shadowJar --no-daemon -PartifactVersion=${{ steps.version.outputs.VERSION }}
       
+      - name: List generated JARs
+        run: ls -lh build/libs/*.jar || echo "No JARs found"
+      
       - name: Publish to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_ACTOR: ${{ github.actor }}
         run: ./gradlew publish --no-daemon -PartifactVersion=${{ steps.version.outputs.VERSION }}
+      
+      - name: Find shadow JAR
+        id: find_jar
+        run: |
+          JAR_FILE=$(ls build/libs/*-all.jar 2>/dev/null | head -1)
+          if [ -z "$JAR_FILE" ]; then
+            echo "ERROR: Shadow JAR not found!"
+            ls -la build/libs/ || echo "build/libs directory not found"
+            exit 1
+          fi
+          echo "JAR_FILE=$JAR_FILE" >> $GITHUB_OUTPUT
+          echo "Found JAR: $JAR_FILE"
+          ls -lh "$JAR_FILE"
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -78,8 +94,7 @@ jobs:
                 <version>${{ steps.version.outputs.VERSION }}</version>
             </dependency>
             ```
-          files: |
-            build/libs/*-all.jar
+          files: ${{ steps.find_jar.outputs.JAR_FILE }}
           draft: false
           prerelease: false
         env:
