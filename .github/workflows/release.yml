@@ -9,28 +9,78 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Cache Gradle
-        uses: gradle/actions/setup-gradle@v3
-      - name: Build
-        run: ./gradlew clean build shadowJar -x test --no-daemon -PartifactVersion=${GITHUB_REF_NAME#v}
+          server-id: github
+          settings-path: ${{ github.workspace }}
+      
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Build and create shadow JAR
+        run: ./gradlew clean build shadowJar --no-daemon -PartifactVersion=${{ steps.version.outputs.VERSION }}
+      
       - name: Publish to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: ./gradlew publish --no-daemon -PartifactVersion=${GITHUB_REF_NAME#v}
-      - name: Upload Release Asset (fat JAR)
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: ./gradlew publish --no-daemon -PartifactVersion=${{ steps.version.outputs.VERSION }}
+      
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/libs/*-all.jar
+          tag_name: ${{ github.ref }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Version ${{ steps.version.outputs.VERSION }}
+            
+            ### Changes
+            See commit history for details.
+            
+            ### Installation
+            
+            **Gradle:**
+            ```kotlin
+            dependencies {
+                implementation("com.leaf:leaf-jdbc-driver:${{ steps.version.outputs.VERSION }}")
+            }
+            ```
+            
+            **Maven:**
+            ```xml
+            <dependency>
+                <groupId>com.leaf</groupId>
+                <artifactId>leaf-jdbc-driver</artifactId>
+                <version>${{ steps.version.outputs.VERSION }}</version>
+            </dependency>
+            ```
+          files: |
+            build/libs/*-all.jar
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
