@@ -161,5 +161,4 @@ public class LeafStatementTest {
     assertEquals(
         "SELECT geometry FROM leaf.pointlake.points TABLESAMPLE(0.3 PERCENT)", receivedSql.trim());
   }
-
 }
