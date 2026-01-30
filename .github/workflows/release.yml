@@ -20,8 +20,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          server-id: github
-          settings-path: ${{ github.workspace }}
       
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
@@ -41,6 +39,8 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
       
       - name: Build and create shadow JAR
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: ./gradlew clean build shadowJar --no-daemon -PartifactVersion=${{ steps.version.outputs.VERSION }}
       
       - name: Publish to GitHub Packages
