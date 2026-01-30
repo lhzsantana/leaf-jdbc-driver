@@ -22,9 +22,14 @@ import org.junit.jupiter.api.Test;
 public class LeafStatementTest {
   private HttpServer server;
   private String apiPrefix;
+  private String receivedSql = null;
 
   @BeforeEach
   void setup() throws Exception {
+    receivedSql = null; // Reset for each test
+    if (server != null) {
+      server.stop(0);
+    }
     server = HttpServer.create(new InetSocketAddress(0), 0);
     // Mock authentication endpoint
     server.createContext("/api/authenticate", this::handleAuthenticate);
@@ -39,9 +44,11 @@ public class LeafStatementTest {
 
   @AfterEach
   void teardown() {
+    if (server != null) {
+      server.stop(0);
+    }
     System.clearProperty("leaf.api.base");
     System.clearProperty("leaf.query.base");
-    server.stop(0);
   }
 
   private void handleAuthenticate(HttpExchange exchange) throws java.io.IOException {
@@ -86,6 +93,18 @@ public class LeafStatementTest {
       return;
     }
 
+    // Verify Content-Type header
+    java.util.List<String> contentTypeHeaders = exchange.getRequestHeaders().get("Content-Type");
+    if (contentTypeHeaders == null || contentTypeHeaders.isEmpty()) {
+      exchange.sendResponseHeaders(400, -1);
+      return;
+    }
+    String contentType = contentTypeHeaders.get(0);
+    if (contentType == null || !contentType.contains("text/plain")) {
+      exchange.sendResponseHeaders(400, -1);
+      return;
+    }
+
     // Read SQL from request body (after verifying headers)
     String sqlQuery;
     try (BufferedReader reader =
@@ -93,6 +112,9 @@ public class LeafStatementTest {
             new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
       sqlQuery = reader.lines().collect(Collectors.joining("\n"));
     }
+
+    // Store received SQL for verification
+    receivedSql = sqlQuery;
 
     // Verify SQL is not empty
     if (sqlQuery == null || sqlQuery.trim().isEmpty()) {
@@ -135,5 +157,43 @@ public class LeafStatementTest {
       assertEquals("POINT (15.754527717117158 50.3120397150037)", rs.getString("geometry"));
       assertFalse(rs.next());
     }
+    assertNotNull(receivedSql);
+    assertEquals(
+        "SELECT geometry FROM leaf.pointlake.points TABLESAMPLE(0.3 PERCENT)", receivedSql.trim());
+  }
+
+  @Test
+  void testComplexQueryWithCTE() throws Exception {
+    Properties p = new Properties();
+    p.setProperty("user", "testuser2");
+    p.setProperty("password", "testpass2");
+
+    String complexQuery =
+        "WITH planted_points AS (\n"
+            + "  SELECT\n"
+            + "    crop,\n"
+            + "    element_at(ST_H3CellIDs(geometry, 12, false), 1) AS cell,\n"
+            + "    seedRate,\n"
+            + "    AVG(seedRate)    OVER (PARTITION BY crop) AS avg_seed_rate,\n"
+            + "    STDDEV(seedRate) OVER (PARTITION BY crop) AS stddev_seed_rate\n"
+            + "  FROM leaf.pointlake.points\n"
+            + "  WHERE operationType = 'planted'\n"
+            + "    AND (crop = 'corn' AND timestamp BETWEEN '2025-04-28' AND '2025-04-29')\n"
+            + ")\n"
+            + "SELECT crop, cell FROM planted_points LIMIT 10";
+
+    // Ensure server is running
+    assertNotNull(server);
+    assertTrue(server.getAddress().getPort() > 0);
+
+    try (Connection c = DriverManager.getConnection("jdbc:leaf:", p);
+        Statement s = c.createStatement();
+        ResultSet rs = s.executeQuery(complexQuery)) {
+      assertNotNull(rs);
+      // Just verify it doesn't throw an exception
+      // The mock server will return empty result set
+    }
+    assertNotNull(receivedSql, "SQL should have been received by mock server");
+    assertEquals(complexQuery.trim(), receivedSql.trim(), "SQL should match exactly");
   }
 }
