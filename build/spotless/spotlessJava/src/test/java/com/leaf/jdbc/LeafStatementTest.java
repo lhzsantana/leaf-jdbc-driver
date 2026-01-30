@@ -94,8 +94,7 @@ public class LeafStatementTest {
     }
 
     // Verify Content-Type header
-    java.util.List<String> contentTypeHeaders =
-        exchange.getRequestHeaders().get("Content-Type");
+    java.util.List<String> contentTypeHeaders = exchange.getRequestHeaders().get("Content-Type");
     if (contentTypeHeaders == null || contentTypeHeaders.isEmpty()) {
       exchange.sendResponseHeaders(400, -1);
       return;
@@ -159,7 +158,8 @@ public class LeafStatementTest {
       assertFalse(rs.next());
     }
     assertNotNull(receivedSql);
-    assertEquals("SELECT geometry FROM leaf.pointlake.points TABLESAMPLE(0.3 PERCENT)", receivedSql.trim());
+    assertEquals(
+        "SELECT geometry FROM leaf.pointlake.points TABLESAMPLE(0.3 PERCENT)", receivedSql.trim());
   }
 
   @Test
