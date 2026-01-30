@@ -3,6 +3,7 @@ package com.leaf.jdbc;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -61,8 +62,10 @@ final class LeafStatement implements Statement {
       HttpUrl base = Objects.requireNonNull(HttpUrl.parse(queryBase));
       HttpUrl url = base.newBuilder().addQueryParameter("sqlEngine", "SPARK_SQL").build();
 
+      // Ensure SQL is properly encoded as UTF-8 bytes
+      byte[] sqlBytes = sql.getBytes(java.nio.charset.StandardCharsets.UTF_8);
       MediaType mediaType = MediaType.parse("text/plain; charset=utf-8");
-      RequestBody body = RequestBody.create(sql, mediaType);
+      RequestBody body = RequestBody.create(sqlBytes, mediaType);
 
       Request request =
           new Request.Builder()
