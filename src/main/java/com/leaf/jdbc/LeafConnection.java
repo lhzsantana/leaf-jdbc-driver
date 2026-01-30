@@ -393,7 +393,7 @@ final class LeafConnection implements Connection {
             if (name.equals("getURL")) return LeafDriver.JDBC_URL_PREFIX;
             if (name.equals("getUserName")) return null;
             if (name.equals("getDriverName")) return "Leaf JDBC Driver";
-            if (name.equals("getDriverVersion")) return "0.3.1";
+            if (name.equals("getDriverVersion")) return "0.3.2";
             if (name.equals("getDriverMajorVersion")) return 0;
             if (name.equals("getDriverMinorVersion")) return 3;
             if (name.equals("getDatabaseProductName")) return "Leaf API";
