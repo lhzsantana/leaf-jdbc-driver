@@ -54,9 +54,11 @@ final class LeafStatement implements Statement {
     }
 
     try {
-      HttpUrl base =
-          Objects.requireNonNull(
-              HttpUrl.parse(connection.apiPrefix() + "/services/pointlake/api/v2/query"));
+      // Use system property for testing, otherwise use production endpoint
+      String queryBase =
+          System.getProperty(
+              "leaf.query.base", "https://api.withleaf.io/services/pointlake/api/v2/query");
+      HttpUrl base = Objects.requireNonNull(HttpUrl.parse(queryBase));
       HttpUrl url = base.newBuilder().addQueryParameter("sqlEngine", "SPARK_SQL").build();
 
       MediaType mediaType = MediaType.parse("text/plain; charset=utf-8");

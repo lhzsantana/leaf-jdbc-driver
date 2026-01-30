@@ -28,17 +28,19 @@ public class LeafStatementTest {
     server = HttpServer.create(new InetSocketAddress(0), 0);
     // Mock authentication endpoint
     server.createContext("/api/authenticate", this::handleAuthenticate);
-    // Mock query endpoint
-    server.createContext("/api/v1/services/pointlake/api/v2/query", this::handleQuery);
+    // Mock query endpoint (correct path without /api/v1)
+    server.createContext("/services/pointlake/api/v2/query", this::handleQuery);
     server.start();
     apiPrefix = "http://localhost:" + server.getAddress().getPort();
-    // Set system property to use mock server
+    // Set system properties to use mock server
     System.setProperty("leaf.api.base", apiPrefix);
+    System.setProperty("leaf.query.base", apiPrefix + "/services/pointlake/api/v2/query");
   }
 
   @AfterEach
   void teardown() {
     System.clearProperty("leaf.api.base");
+    System.clearProperty("leaf.query.base");
     server.stop(0);
   }
 

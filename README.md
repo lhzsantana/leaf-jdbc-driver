@@ -139,7 +139,7 @@ The authentication happens automatically when you create a connection. The drive
 
 ## API Format
 
-**Endpoint:** `https://api.withleaf.io/api/v1/services/pointlake/api/v2/query?sqlEngine=SPARK_SQL`
+**Endpoint:** `https://api.withleaf.io/services/pointlake/api/v2/query?sqlEngine=SPARK_SQL`
 
 **Method:** `POST`
 
