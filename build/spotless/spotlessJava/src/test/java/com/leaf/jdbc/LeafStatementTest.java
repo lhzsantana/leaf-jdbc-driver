@@ -93,7 +93,7 @@ public class LeafStatementTest {
             new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
       sqlQuery = reader.lines().collect(Collectors.joining("\n"));
     }
-    
+
     // Verify SQL is not empty
     if (sqlQuery == null || sqlQuery.trim().isEmpty()) {
       exchange.sendResponseHeaders(400, -1);

@@ -61,10 +61,9 @@ final class LeafStatement implements Statement {
       HttpUrl base = Objects.requireNonNull(HttpUrl.parse(queryBase));
       HttpUrl url = base.newBuilder().addQueryParameter("sqlEngine", "SPARK_SQL").build();
 
-      // Ensure SQL is properly encoded as UTF-8 bytes
-      byte[] sqlBytes = sql.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      // Create request body with SQL query as plain text
       MediaType mediaType = MediaType.parse("text/plain; charset=utf-8");
-      RequestBody body = RequestBody.create(sqlBytes, mediaType);
+      RequestBody body = RequestBody.create(sql, mediaType);
 
       Request request =
           new Request.Builder()
